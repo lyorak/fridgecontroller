@@ -26,6 +26,11 @@ var myApp = mcs.register(mcsConfig);
 const ledPin = 13;
 const t1pin = 18;
 const t2pin = 19;
+const fan1Fullpin = 8;
+const fan1Halfpin = 9;
+const fan2Fullpin = 10;
+const fan2Halfpin = 11;
+
 var tSensors = [t1pin, t2pin];
 
 var firmata = require('firmata');
@@ -47,7 +52,6 @@ var tfront = 0.0;
 var tback = 0.0;
 var deltaT = 0.0;
 var autoMode = true;
-const allowedDelta = 2.0;
 
 
 var board = new firmata.Board("/dev/ttyS0", function(err) {
@@ -61,6 +65,15 @@ var board = new firmata.Board("/dev/ttyS0", function(err) {
     var fw = board.firmware;
     console.log('board.firmware: ', fw);
     board.pinMode(ledPin, board.MODES.OUTPUT);
+    board.pinMode(fan1Fullpin, board.MODES.OUTPUT);
+    board.pinMode(fan1Halfpin, board.MODES.OUTPUT);
+    board.pinMode(fan2Fullpin, board.MODES.OUTPUT);
+    board.pinMode(fan2Halfpin, board.MODES.OUTPUT);
+    board.digitalWrite(ledPin, board.LOW);
+    board.digitalWrite(fan1Fullpin, board.LOW);
+    board.digitalWrite(fan1Halfpin, board.LOW);
+    board.digitalWrite(fan2Fullpin, board.LOW);
+    board.digitalWrite(fan2Halfpin, board.LOW);
     board.sysexResponse(0x7c, function(data) {
         var pdata = firmata.Board.decode(data);
         var ecode = pdata[1];
@@ -71,7 +84,7 @@ var board = new firmata.Board("/dev/ttyS0", function(err) {
             var temperature = ((pdata[3] & 0x7f) << 8 | pdata[2]) / 10.0;
             temperature = temperature * sign;
             var humidity = (pdata[5] << 8 | pdata[4]) / 10.0;
-            firmataEmitter.emit('temperaure-' + pin, temperature);
+            firmataEmitter.emit('temperature-' + pin, temperature);
             firmataEmitter.emit('humidity-' + pin, humidity);
         } else {
             dhtAttCnt++;
@@ -87,17 +100,17 @@ var board = new firmata.Board("/dev/ttyS0", function(err) {
 });
 
 
-firmataEmitter.on('temperaure-' + t1pin, function(value) {
+firmataEmitter.on('temperature-' + t1pin, function(value) {
     console.log('temperature back: ', value);
     myApp.emit('tback', '', value);
     tback = value;
 });
 
-firmataEmitter.on('temperaure-' + t2pin, function(value) {
+firmataEmitter.on('temperature-' + t2pin, function(value) {
     console.log('temperature front: ', value);
     myApp.emit('tfront', '', value);
     tfront = value;
-    tback = 26.0;
+    //tback = 26.0;
     firmataEmitter.emit('deltaT',(tback - tfront));
     
 });
@@ -129,26 +142,51 @@ firmataEmitter.on('fans', function(value) {
         case 0:
             myApp.emit('fan1','',0);
             myApp.emit('fan2','',0);
+            board.digitalWrite(fan1Fullpin, board.LOW);
+            board.digitalWrite(fan1Halfpin, board.LOW);
+            board.digitalWrite(fan2Fullpin, board.LOW);
+            board.digitalWrite(fan2Halfpin, board.LOW);
             break;
         case 1:
             myApp.emit('fan1','',1);
             myApp.emit('fan2','',0);
+            board.digitalWrite(fan1Fullpin, board.LOW);
+            board.digitalWrite(fan1Halfpin, board.HIGH);
+            board.digitalWrite(fan2Fullpin, board.LOW);
+            board.digitalWrite(fan2Halfpin, board.LOW);
             break;        
         case 2:
             myApp.emit('fan1','',1);
             myApp.emit('fan2','',1);
+            board.digitalWrite(fan1Fullpin, board.LOW);
+            board.digitalWrite(fan1Halfpin, board.HIGH);
+            board.digitalWrite(fan2Fullpin, board.LOW);
+            board.digitalWrite(fan2Halfpin, board.HIGH);
             break;        
         case 3:
             myApp.emit('fan1','',2);
             myApp.emit('fan2','',1);
+            board.digitalWrite(fan1Fullpin, board.HIGH);
+            board.digitalWrite(fan1Halfpin, board.LOW);
+            board.digitalWrite(fan2Fullpin, board.LOW);
+            board.digitalWrite(fan2Halfpin, board.HIGH);
             break;        
         case 4:
             myApp.emit('fan1','',2);
             myApp.emit('fan2','',2);
+            board.digitalWrite(fan1Fullpin, board.HIGH);
+            board.digitalWrite(fan1Halfpin, board.LOW);
+            board.digitalWrite(fan2Fullpin, board.HIGH);
+            board.digitalWrite(fan2Halfpin, board.LOW);
             break;        
         default:
             myApp.emit('fan1','',1);
             myApp.emit('fan2','',1);;
+            board.digitalWrite(fan1Fullpin, board.LOW);
+            board.digitalWrite(fan1Halfpin, board.HIGH);
+            board.digitalWrite(fan2Fullpin, board.LOW);
+            board.digitalWrite(fan2Halfpin, board.HIGH);
+            break;
     }
 });
 
@@ -169,14 +207,10 @@ myApp.on('mcs:connected', function() {
 });
 
 myApp.on('automanual', function(data, time) {
-    if (connectedToFirmata) {
-        if (Number(data) === 1) {
-           // console.log('blink');
-            autoMode = true;
-        } else {
-            //console.log('off');
-            autoMode = false;
-        }
+    if (Number(data) === 1) {
+        autoMode = true;
+    } else {
+        autoMode = false;
     }
 });
 
