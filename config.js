@@ -3,8 +3,8 @@ var fs = require('fs');
 
 program
   .version('0.0.1')
-  .option('-i, --deviceId [id]', 'MCS device ID')
-  .option('-k, --deviceKey [key]', 'MCS device key')
+  .option('-i, --deviceId <id>', 'MCS device ID')
+  .option('-k, --deviceKey <key>', 'MCS device key')
   .option('-h, --host [host]','MCS host','api.mediatek.com')
   .parse(process.argv);
 
