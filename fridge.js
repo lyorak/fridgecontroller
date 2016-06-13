@@ -31,11 +31,34 @@ const fan1Halfpin = 9;
 const fan2Fullpin = 10;
 const fan2Halfpin = 11;
 
+const fan1 = {
+    half: fan1Halfpin,
+    full: fan1Fullpin
+};
+
+const fan2 = {
+    half: fan2Halfpin,
+    full: fan2Fullpin
+};
+
 var tSensors = [t1pin, t2pin];
 
 var firmata = require('firmata');
 const dhtAttempts = 3;
 var dhtAttCnt = 0;
+
+var setFan = function(fan,level) {
+    if(level == 0) {
+        board.digitalWrite(fan.half, board.LOW);
+        board.digitalWrite(fan.full, board.LOW);
+    }else if(level == 50) {
+        board.digitalWrite(fan.half, board.HIGH);
+        board.digitalWrite(fan.full, board.LOW);
+    }if(level == 100) {
+        board.digitalWrite(fan.half, board.LOW);
+        board.digitalWrite(fan.full, board.HIGH);
+    }
+}
 
 var getTempHum = function(pin, aboard) {
     //console.log('Asking sensor on pin ',pin);
@@ -110,7 +133,7 @@ firmataEmitter.on('temperature-' + t2pin, function(value) {
     console.log('temperature front: ', value);
     myApp.emit('tfront', '', value);
     tfront = value;
-    //tback = 26.0;
+    tback = 26.0;
     firmataEmitter.emit('deltaT',(tback - tfront));
     
 });
@@ -140,52 +163,40 @@ firmataEmitter.on('deltaT',function(value){
 firmataEmitter.on('fans', function(value) {
     switch(value) {
         case 0:
-            myApp.emit('fan1','',0);
-            myApp.emit('fan2','',0);
-            board.digitalWrite(fan1Fullpin, board.LOW);
-            board.digitalWrite(fan1Halfpin, board.LOW);
-            board.digitalWrite(fan2Fullpin, board.LOW);
-            board.digitalWrite(fan2Halfpin, board.LOW);
+            myApp.emit('fanswitch_a','',0);
+            myApp.emit('fanswitch_b','',0);
+            setFan(fan1,0);
+            setFan(fan2,0);
             break;
         case 1:
-            myApp.emit('fan1','',1);
-            myApp.emit('fan2','',0);
-            board.digitalWrite(fan1Fullpin, board.LOW);
-            board.digitalWrite(fan1Halfpin, board.HIGH);
-            board.digitalWrite(fan2Fullpin, board.LOW);
-            board.digitalWrite(fan2Halfpin, board.LOW);
+            myApp.emit('fanswitch_a','',1);
+            myApp.emit('fanswitch_b','',0);
+            setFan(fan1,50);
+            setFan(fan2,0);
             break;        
         case 2:
-            myApp.emit('fan1','',1);
-            myApp.emit('fan2','',1);
-            board.digitalWrite(fan1Fullpin, board.LOW);
-            board.digitalWrite(fan1Halfpin, board.HIGH);
-            board.digitalWrite(fan2Fullpin, board.LOW);
-            board.digitalWrite(fan2Halfpin, board.HIGH);
+            myApp.emit('fanswitch_a','',1);
+            myApp.emit('fanswitch_b','',1);
+            setFan(fan1,50);
+            setFan(fan2,50);
             break;        
         case 3:
-            myApp.emit('fan1','',2);
-            myApp.emit('fan2','',1);
-            board.digitalWrite(fan1Fullpin, board.HIGH);
-            board.digitalWrite(fan1Halfpin, board.LOW);
-            board.digitalWrite(fan2Fullpin, board.LOW);
-            board.digitalWrite(fan2Halfpin, board.HIGH);
+            myApp.emit('fanswitch_a','',2);
+            myApp.emit('fanswitch_b','',1);
+            setFan(fan1,100);
+            setFan(fan2,50);
             break;        
         case 4:
-            myApp.emit('fan1','',2);
-            myApp.emit('fan2','',2);
-            board.digitalWrite(fan1Fullpin, board.HIGH);
-            board.digitalWrite(fan1Halfpin, board.LOW);
-            board.digitalWrite(fan2Fullpin, board.HIGH);
-            board.digitalWrite(fan2Halfpin, board.LOW);
+            myApp.emit('fanswitch_a','',2);
+            myApp.emit('fanswitch_b','',2);
+            setFan(fan1,100);
+            setFan(fan2,100);
             break;        
         default:
-            myApp.emit('fan1','',1);
-            myApp.emit('fan2','',1);;
-            board.digitalWrite(fan1Fullpin, board.LOW);
-            board.digitalWrite(fan1Halfpin, board.HIGH);
-            board.digitalWrite(fan2Fullpin, board.LOW);
-            board.digitalWrite(fan2Halfpin, board.HIGH);
+            myApp.emit('fanswitch_a','',1);
+            myApp.emit('fanswitch_b','',1);;
+            setFan(fan1,50);
+            setFan(fan2,50);
             break;
     }
 });
@@ -204,6 +215,8 @@ myApp.on('mcs:connected', function() {
     connectedToMCS = true;
     console.log('connected to MCS');
     myApp.emit('automanual','',1);
+    myApp.emit('fanswitch_a','',0);
+    myApp.emit('fanswitch_b','',0);
 });
 
 myApp.on('automanual', function(data, time) {
@@ -213,6 +226,27 @@ myApp.on('automanual', function(data, time) {
         autoMode = false;
     }
 });
+
+myApp.on('fanswitch_a', function(data, time) {
+    if (Number(data) === 0) {
+        setFan(fan1,0);
+    } else if (Number(data) === 1) {
+        setFan(fan1,50);
+    } else if (Number(data) === 2) {
+        setFan(fan1,100);
+    }
+});
+
+myApp.on('fanswitch_b', function(data, time) {
+    if (Number(data) === 0) {
+        setFan(fan2,0);
+    } else if (Number(data) === 1) {
+        setFan(fan2,50);
+    } else if (Number(data) === 2) {
+        setFan(fan2,100);
+    }
+});
+
 
 myApp.emit('ifan', '', 3.45);
 myApp.emit('airflow', '', 5.87);
