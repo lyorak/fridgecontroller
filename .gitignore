@@ -1,5 +1,6 @@
 mcsconfig.json
 .vscode/ftp-sync.json
+*.zip
 
 # Logs
 logs
